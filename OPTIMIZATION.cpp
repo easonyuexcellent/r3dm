@@ -613,13 +613,10 @@ void OPTIMIZATION::run_multi(){
 
       JH_inst();
 
-//      time(&time_now);
-//      sprintf(std_msg,"Time,  Cost Function");
-//
-//      ui->textEdit->append(std_msg);ui->textEdit->moveCursor(QTextCursor::End);
-//      sprintf(std_msg,"%d %f",(time_now-time_init),JH.mi());
-//
-//      ui->textEdit->append(std_msg);ui->textEdit->moveCursor(QTextCursor::End);
+      time(&time_now);
+      printf("Time,  Cost Function");
+      printf("%d %f",(time_now-time_init),JH.mi());
+
 
       curr_res_index++;
 
