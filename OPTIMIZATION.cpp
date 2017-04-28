@@ -476,6 +476,8 @@ void OPTIMIZATION::run_multi(){
   hot_spots htspts;
 
   printf("Registration has started.\n");
+  time(&time_now);
+  printf("Time: %ld\n",(time_now-time_init));
 
   //loop on all levels of algorithm
   for(i=0;i<num_levels;i++){
@@ -538,6 +540,11 @@ void OPTIMIZATION::run_multi(){
     printf("     Number of hot spots is %d \n", htspts.num_hp);
 
     gradient.destroy();
+
+    printf("Registration has started.\n");
+    time(&time_now);
+    printf("Time: %ld\n",(time_now-time_init));
+
 
     //multi_processing "hot spots"
     int j=0;
@@ -614,8 +621,8 @@ void OPTIMIZATION::run_multi(){
       JH_inst();
 
       time(&time_now);
-      printf("Time,  Cost Function");
-      printf("%d %f",(time_now-time_init),JH.mi());
+      printf("Time,  Cost Function\n");
+      printf("%d %f\n",(time_now-time_init),JH.mi());
 
 
       curr_res_index++;
