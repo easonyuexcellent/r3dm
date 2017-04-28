@@ -41,7 +41,7 @@ void gradient_class::init(int lx,int rx,int ty,int by,int fz,int bz,int nptsx, i
   spcz = (data_type)(myabs(((data_type)(bz-fz))/((data_type)(nptsz-1))));
   
   
-  supp = (int)max(spcx,spcy);
+  supp = (int)mymax(spcx,spcy);
   supp = (int)ceil(FLEX*supp);
   suppz = (int)ceil(FLEX*spcz);
   //printf("Inside grd.init. Supp = %d , Suppz = %d, spcz = %f, spcx = %f, spcy = %f \n", supp, suppz,spcz,spcx,spcy);
@@ -92,12 +92,12 @@ void gradient_class::init(int lx,int rx,int ty,int by,int fz,int bz,int nptsx, i
   for(i=0;i<num_points;i++){
     
     //find appropriate indexes for acessing
-    vx_start = (int)max((get(i,0,'p')-supp),0);
-    vx_end = (int)min((get(i,0,'p')+supp+1),(sizex-1));
-    vy_start = (int)max((get(i,1,'p')-supp),0);
-    vy_end = (int)min((get(i,1,'p')+supp+1),(sizey-1));
-    vz_start = (int)max((get(i,2,'p')-suppz),0);
-    vz_end = (int)min((get(i,2,'p')+suppz+1),(sizez-1));
+    vx_start = (int)mymax((get(i,0,'p')-supp),0);
+    vx_end = (int)mymin((get(i,0,'p')+supp+1),(sizex-1));
+    vy_start = (int)mymax((get(i,1,'p')-supp),0);
+    vy_end = (int)mymin((get(i,1,'p')+supp+1),(sizey-1));
+    vz_start = (int)mymax((get(i,2,'p')-suppz),0);
+    vz_end = (int)mymin((get(i,2,'p')+suppz+1),(sizez-1));
     
     if (vx_start<minx)
       minx = vx_start;
@@ -188,12 +188,12 @@ void gradient_class::init2(int x, int y, int z, int sx, int sy, int sz, int sp, 
 
   int i=0;
   
-  lx  = (int)max(0,floor(x-(data_type)sx/2.0));
-  rx =  (int)min((sizex-1),floor(x+(data_type)sx/2.0));
-  ty = (int)max(0,floor(y-(data_type)sy/2.0));
-  by = (int)min((sizey-1),floor(y+(data_type)sy/2.0));
-  fz = (int)max(0,floor(z-(data_type)sz/2.0));
-  bz = (int)min((sizez-1),floor(z+(data_type)sz/2.0));
+  lx  = (int)mymax(0,floor(x-(data_type)sx/2.0));
+  rx =  (int)mymin((sizex-1),floor(x+(data_type)sx/2.0));
+  ty = (int)mymax(0,floor(y-(data_type)sy/2.0));
+  by = (int)mymin((sizey-1),floor(y+(data_type)sy/2.0));
+  fz = (int)mymax(0,floor(z-(data_type)sz/2.0));
+  bz = (int)mymin((sizez-1),floor(z+(data_type)sz/2.0));
   
   int xx,yy,zz;
   for(xx=0;xx<nx;xx++){
@@ -228,12 +228,12 @@ void gradient_class::init2(int x, int y, int z, int sx, int sy, int sz, int sp, 
   for(i=0;i<num_points;i++){
     
     //find appropriate indexes for acessing
-    vx_start = (int)max((get(i,0,'p')-supp),0);
-    vx_end = (int)min((get(i,0,'p')+supp+1),(sizex-1));
-    vy_start = (int)max((get(i,1,'p')-supp),0);
-    vy_end = (int)min((get(i,1,'p')+supp+1),(sizey-1));
-    vz_start = (int)max((get(i,2,'p')-suppz),0);
-    vz_end = (int)min((get(i,2,'p')+suppz+1),(sizez-1));
+    vx_start = (int)mymax((get(i,0,'p')-supp),0);
+    vx_end = (int)mymin((get(i,0,'p')+supp+1),(sizex-1));
+    vy_start = (int)mymax((get(i,1,'p')-supp),0);
+    vy_end = (int)mymin((get(i,1,'p')+supp+1),(sizey-1));
+    vz_start = (int)mymax((get(i,2,'p')-suppz),0);
+    vz_end = (int)mymin((get(i,2,'p')+suppz+1),(sizez-1));
     
     if (vx_start<minx)
       minx = vx_start;

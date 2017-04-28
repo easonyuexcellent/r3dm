@@ -131,7 +131,7 @@ data_type basis_function::WU2(data_type r){
 	 
 	r = r/((data_type)supp);
 
-	temp = max(1-r,0); 
+    temp = mymax(1-r,0);
 	return (data_type)(pow(temp,4)*(4 + 16*r + 12*pow(r,2) + 3*pow(r,3)));
 	
 }
@@ -146,7 +146,7 @@ data_type basis_function::WU2_np(data_type r){
 	 
 	//r = r/((data_type)suppz);
 
-	temp = max(1-r,0); 
+    temp = mymax(1-r,0);
 	return (data_type)(pow(temp,4)*(4 + 16*r + 12*pow(r,2) + 3*pow(r,3)));
 	
 }

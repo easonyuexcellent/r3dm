@@ -1,18 +1,3 @@
-/*
-The Adaptive Grid Registration Algorithm: A New Spline Modeling Aproach for Nonrigid Image Registration.
-Program to perform nonrigid data registration in 3d.
-Adapted to suit medical images.
-By Gustavo Kunde Rohde, fall&winter 2000,2001.
-
-This is the "main" function.
-Its purpose is to initialize the optimization class given the input file.
-Then it performs registration by calling the "run" method in the optimization class.
-Memory cleanup is performed afterwards
-
-
-*/
-
-//#define UNIX
 #define PC
 
 #ifdef UNIX
@@ -29,35 +14,41 @@ Memory cleanup is performed afterwards
 #include "splcoord.h"
 #include "OPTIMIZATION.h"
 #include "config_class.h"
+#include <QMetaType>
+#include <QString>
 
-int main(int argc, char *argv[]){
+Register3d::Register3d(int _a, char ** _b)
+{
+    argc=_a;
+    argv=_b;
+}
 
-  fprintf(stderr," Entering program.\n");
+void Register3d::run()
+{
 
-  config_class cfg_obj;
+    fprintf(stderr," Entering program.\n");
 
-  if(argc!=2){
-    printf("Please enter a valid configuration file.\n");
-    exit(1);
-  }
+    config_class cfg_obj;
 
-  cfg_obj.init(argv[1]);
+    if(argc!=2){
+      printf("Please enter a valid configuration file.\n");
+      exit(1);
+    }
 
+    cfg_obj.init(argv[1]);
 
-  OPTIMIZATION program;
+    OPTIMIZATION program;
+    program.init(cfg_obj);
+    if (cfg_obj.OP_MODE==2){
+        program.run_multi();
+    }else if (cfg_obj.OP_MODE==1){
+        program.run_gus();
+    }else{
+        program.run();
+    }
 
-  program.init(cfg_obj);
-  fprintf(stderr," Calling run procedure.\n");
-
-  if (cfg_obj.OP_MODE==0){
-    program.run();
-  }else{
-    program.run_gus();
-  }
-
-  program.output(cfg_obj.out);
-  program.destroy();
-  cfg_obj.destroy();
-
-  return 1;
+    program.output(cfg_obj.out);
+    program.destroy();
+    cfg_obj.destroy();
+    printf("Run procedure ended.\n");
 }

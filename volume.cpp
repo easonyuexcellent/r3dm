@@ -236,9 +236,9 @@ void volume::dilate(void){
 	m[i][j][k]=0;
 	if(Rm[i][j][k]>0){
 	 
-	  for(kk=max(0,k-2);kk<min(nzR-1,k+2);kk++){
-	    for(jj=max(0,j-2);jj<min(nyR-1,j+2);jj++){
-	      for(ii=max(0,i-2);ii<min(nxR-1,i+2);ii++){
+      for(kk=mymax(0,k-2);kk<mymin(nzR-1,k+2);kk++){
+        for(jj=mymax(0,j-2);jj<mymin(nyR-1,j+2);jj++){
+          for(ii=mymax(0,i-2);ii<mymin(nxR-1,i+2);ii++){
 		m[ii][jj][kk]=1;
 	      }
 	    }

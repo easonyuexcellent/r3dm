@@ -43,6 +43,7 @@ class OPTIMIZATION {
    */
   void run(void); //runs the old algorithm
   void run_gus(void); //runs the new one
+  void run_multi(void); //runs the multi-thread one
   
   /**Given a filename for output, it will save the result image after registration. If so desired it will
      also save the deformation fields
@@ -124,7 +125,8 @@ class OPTIMIZATION {
   /**Method that uses the current gradient structure to update and actually change the current deformation
      field.
    */
-  void def_field_update(void); 
+  void def_field_update(void);
+  void def_field_update2(gradient_class *);
 
   /**Method that applyes the current deformation field to the source image and stores the result in
      the source image itself

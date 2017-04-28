@@ -1,9 +1,7 @@
-#include <QCoreApplication>
-#include <iostream>
-using namespace std;
+#include "register3d.h"
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-    cout<<"Hello, world!"<<endl;
-    return a.exec();
+    Register3d r3d(argc,argv);
+    r3d.start();
+    r3d.wait();
 }

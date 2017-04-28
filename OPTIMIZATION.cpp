@@ -32,7 +32,7 @@
 #include <time.h>
 #include <string.h>
 
-
+#include "multithread_hot_spots.h"
 
 
 
@@ -228,12 +228,12 @@ void OPTIMIZATION::init(config_class &cfg){
 
   if (cfg.B_SEG==1){
     
-    bbox.lx = max(0,target.lx-5);
-    bbox.rx = min(target.rx+5,target.nx-1);
-    bbox.ty = max(0,target.ty-5);
-    bbox.by = min(target.by+5,target.ny-1);
-    bbox.fz = max(0,target.fz-5);
-    bbox.bz = min(target.bz+5,target.nz-1);
+    bbox.lx = mymax(0,target.lx-5);
+    bbox.rx = mymin(target.rx+5,target.nx-1);
+    bbox.ty = mymax(0,target.ty-5);
+    bbox.by = mymin(target.by+5,target.ny-1);
+    bbox.fz = mymax(0,target.fz-5);
+    bbox.bz = mymin(target.bz+5,target.nz-1);
     
     printf("The bounding box is: \n");
     printf("%d,%d\n",bbox.lx,bbox.rx);
@@ -396,12 +396,12 @@ void OPTIMIZATION::JH_inst1(){
     
     
     //find appropriate indexes for acessing
-    vx_start = (int)max((gradient.get(i,0,'p')-gradient.supp),0);
-    vx_end = (int)min((gradient.get(i,0,'p')+gradient.supp),(source.nx));
-    vy_start = (int)max((gradient.get(i,1,'p')-gradient.supp),0);
-    vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp),(source.ny));
-    vz_start = (int)max((gradient.get(i,2,'p')-gradient.supp),0);
-    vz_end = (int)min((gradient.get(i,2,'p')+gradient.supp),(source.nz));
+    vx_start = (int)mymax((gradient.get(i,0,'p')-gradient.supp),0);
+    vx_end = (int)mymin((gradient.get(i,0,'p')+gradient.supp),(source.nx));
+    vy_start = (int)mymax((gradient.get(i,1,'p')-gradient.supp),0);
+    vy_end = (int)mymin((gradient.get(i,1,'p')+gradient.supp),(source.ny));
+    vz_start = (int)mymax((gradient.get(i,2,'p')-gradient.supp),0);
+    vz_end = (int)mymin((gradient.get(i,2,'p')+gradient.supp),(source.nz));
     
     //find appropriate indexes for RBF
     bx_start = (int)(gradient.supp - (gradient.get(i,0,'p') - vx_start));
@@ -465,6 +465,196 @@ void OPTIMIZATION::JH_inst1(){
 
 }
 
+
+
+void OPTIMIZATION::run_multi(){
+
+  int i;
+  int STOP = 0;
+  data_type2 last_min,curr_min,diff;
+  curr_level = 0;
+  hot_spots htspts;
+
+  printf("Registration has started.\n");
+
+  //loop on all levels of algorithm
+  for(i=0;i<num_levels;i++){
+
+    npoints_x = ctrpts_array[i];
+    npoints_y = ctrpts_array[i];
+    npoints_z = ctrptsZ_array[i];
+
+    printf("LEVEL %d out of %d.\n",i+1,num_levels);
+
+
+    //first establish regular grid based on current level
+    gradient.init(bbox.lx,bbox.rx,bbox.ty,bbox.by,bbox.fz,bbox.bz,npoints_x,npoints_y,npoints_z,source.nx,source.ny,source.nz,FLEX);
+
+    //create appropriate radial basis function
+    RBF.init(gradient.supp,gradient.suppz,num_rbf_init);
+    printf("     Current support of RBF %d,%d.\n",gradient.supp,gradient.suppz);
+
+    last_min = JH.mi();
+    STOP=0;
+
+    while(STOP<1){ //evaluate G once, allow for choosing more than once
+
+      //sprintf(std_msg,"     Computing gradient of regular grid ... ");
+      grd();
+      //sprintf(std_msg,"     Doing line minimization of regular grid ... ");
+      curr_min = line_minimize();
+
+
+      diff = last_min-curr_min;
+      if(diff<0) diff=-diff;
+      if (diff<min_EPS) {
+    //sprintf(std_msg,"should have stoped");
+    STOP=1;
+      } else {
+    last_min = curr_min;
+      }
+
+      STOP = 1;
+
+    }
+
+
+    //hold temporarily
+    int tx, ty, tz, support, supportz;
+    tx = (int)ceil(gradient.spcx);
+    ty = (int)ceil(gradient.spcy);
+    tz = (int)ceil(gradient.spcz);
+    support = gradient.supp;
+    supportz = gradient.suppz;
+
+    def_field_update();
+
+    JH_inst();
+
+
+    //now identify "hot spots"
+    data_type2 konst = pick_const;
+    htspts.prune1(gradient, konst, num_rbf_init, source, target);
+    printf("     Number of hot spots is %d \n", htspts.num_hp);
+
+    gradient.destroy();
+
+    //multi_processing "hot spots"
+    int j=0;
+    if (htspts.num_hp>0){
+        multithread_hot_spots **p;
+        p =(multithread_hot_spots **)malloc(htspts.num_hp*sizeof(multithread_hot_spots *));
+        for (j=0;j<htspts.num_hp;j++){
+            p[j]=new multithread_hot_spots;
+            p[j]->init( &htspts,&JH,&source,&target,&def_field,&RBF,mmax,mmin,nbins_src,nbins_trg);
+            p[j]->grd_STEP=grd_STEP;
+            p[j]->br_STEP=br_STEP;
+            p[j]->X_opt=X_opt;
+            p[j]->Y_opt=Y_opt;
+            p[j]->Z_opt=Z_opt;
+            p[j]->min_EPS=min_EPS;
+            p[j]->s_trsh=s_trsh;
+            p[j]->gradient.init2(htspts.get(j,0),htspts.get(j,1),htspts.get(j,2),tx,ty,tz,support,supportz,source.nx,source.ny,source.nz);
+            p[j]->start();
+        }
+
+        //wait for "hot spots"
+        while (1){
+            int countr = 0;
+            int counte = 0;
+            for (j=0;j<htspts.num_hp;j++){
+                countr+=p[j]->runflag;
+                counte+=p[j]->endflag;
+            }
+            if (countr==0&&counte+1>=htspts.num_hp){
+                break;
+            }
+        }
+
+        //update def_field
+        for (j=0;j<htspts.num_hp;j++){
+            def_field_update2(&(p[j]->gradient));
+            p[j]->gradient.destroy();
+        }
+    }
+    //reset
+    STOP=0;
+    num_rbf_init++;
+    //npoints_x = npoints_x + (npoints_x - 1);
+    //npoints_y = npoints_y + (npoints_y - 1);
+    //npoints_z = npoints_z + (npoints_z - 1);
+    RBF.reset();
+    curr_level++;
+
+    //sprintf(std_msg," The new test: res_array[curr_res_index] = %d, npoints_x = %d.", res_array[curr_res_index], npoints_x);
+
+    //upsample resolution if necessary
+    if ( (res_array[curr_res_index]<=npoints_x)&&(max_res_index>curr_res_index) ){
+      printf("\n");
+
+      printf("Changing resolutions %d.\n", curr_resolution-1);
+      curr_resolution--;
+
+      source.destroy();//destroys only current resolution
+      target.destroy();//destroys only current resolution
+
+      source.build_resolution(curr_resolution);
+      target.build_resolution(curr_resolution);
+
+
+      def_field.upsample();
+
+      bbox.lx = bbox.lx*2;
+      bbox.rx = bbox.rx*2;
+      bbox.by = bbox.by*2;
+      bbox.ty = bbox.ty*2;
+      bbox.fz = bbox.fz*2;
+      bbox.bz = bbox.bz*2;
+
+      JH_inst();
+
+//      time(&time_now);
+//      sprintf(std_msg,"Time,  Cost Function");
+//
+//      ui->textEdit->append(std_msg);ui->textEdit->moveCursor(QTextCursor::End);
+//      sprintf(std_msg,"%d %f",(time_now-time_init),JH.mi());
+//
+//      ui->textEdit->append(std_msg);ui->textEdit->moveCursor(QTextCursor::End);
+
+      curr_res_index++;
+
+    }
+
+
+
+    //end
+  }
+
+  //sprintf(std_msg,"Generating result.");
+  if (curr_resolution!=0) {
+
+    source.destroy();//destroys only current resolution
+    target.destroy();//destroys only current resolution
+    source.build_resolution(0);
+    target.build_resolution(0);
+
+    for (i=0;i<curr_resolution;i++){
+      def_field.upsample();
+    }
+    JH_inst();
+
+  }
+
+  printf("Optimization completed.\n");
+
+  time(&time_now);
+  printf("Time: %ld seconds.\n",(time_now-time_init));
+
+  printf("Final value for cost function %f .\n", JH.mi());
+
+  generate_result();
+
+}
 
 
 
@@ -635,7 +825,7 @@ void OPTIMIZATION::run_gus(){
 
       time(&time_now);
       printf("Time,  Cost Function\n");
-      printf("%d %f\n",(time_now-time_init),JH.mi());
+      printf("%ld %f\n",(time_now-time_init),JH.mi());
 
       curr_res_index++;
 
@@ -664,7 +854,7 @@ void OPTIMIZATION::run_gus(){
   printf("Optimization completed.\n");
   time(&time_now);
   //printf("%d %f\n",(time_now-time_init),JH.mi());
-  printf("Time: %d seconds.\n",(time_now-time_init));
+  printf("Time: %ld seconds.\n",(time_now-time_init));
   printf("Final value for cost function %f .\n", JH.mi());
   generate_result();
 	
@@ -760,7 +950,7 @@ void OPTIMIZATION::run(){
 
       time(&time_now);
       printf("Time,  Cost Function\n");
-      printf("%d %f\n",(time_now-time_init),JH.mi());
+      printf("%ld %f\n",(time_now-time_init),JH.mi());
 
       curr_res_index++;
 
@@ -787,7 +977,7 @@ void OPTIMIZATION::run(){
   printf("Optimization completed.\n");
   time(&time_now);
   //printf("%d %f\n",(time_now-time_init),JH.mi());
-  printf("Time: %d seconds.\n",(time_now-time_init));
+  printf("Time: %ld seconds.\n",(time_now-time_init));
   printf("Final value for cost function &f .\n", JH.mi());
   generate_result();
 
@@ -850,12 +1040,12 @@ void OPTIMIZATION::JH_inst_up(matrix_2d &JH_temp,
     //vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp+1),(def_field_temp.ny));
     //vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz),0);
     //vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz+1),(def_field_temp.nz));
-    vx_start = (int)max((gradient.get(i,0,'p')-gradient.supp-minx),0);
-    vx_end = (int)min((gradient.get(i,0,'p')+gradient.supp+1-minx),(def_field_temp.nx));
-    vy_start = (int)max((gradient.get(i,1,'p')-gradient.supp-miny),0);
-    vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp+1-miny),(def_field_temp.ny));
-    vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz-minz),0);
-    vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz+1-minz),(def_field_temp.nz));
+    vx_start = (int)mymax((gradient.get(i,0,'p')-gradient.supp-minx),0);
+    vx_end = (int)mymin((gradient.get(i,0,'p')+gradient.supp+1-minx),(def_field_temp.nx));
+    vy_start = (int)mymax((gradient.get(i,1,'p')-gradient.supp-miny),0);
+    vy_end = (int)mymin((gradient.get(i,1,'p')+gradient.supp+1-miny),(def_field_temp.ny));
+    vz_start = (int)mymax((gradient.get(i,2,'p')-gradient.suppz-minz),0);
+    vz_end = (int)mymin((gradient.get(i,2,'p')+gradient.suppz+1-minz),(def_field_temp.nz));
     
     //find appropriate indexes for RBF
     //bx_start = (int)(gradient.supp - (gradient.get(i,0,'p') - vx_start));
@@ -1029,12 +1219,12 @@ data_type2 OPTIMIZATION::f_eval(data_type konst, matrix_2d &JH_temp, matrix_2d &
     //vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp+1),(def_field_temp.ny));
     //vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz),0);
     //vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz+1),(def_field_temp.nz));
-    vx_start = (int)max((gradient.get(i,0,'p')-gradient.supp-minx),0);
-    vx_end = (int)min((gradient.get(i,0,'p')+gradient.supp+1-minx),(def_field_temp.nx));
-    vy_start = (int)max((gradient.get(i,1,'p')-gradient.supp-miny),0);
-    vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp+1-miny),(def_field_temp.ny));
-    vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz-minz),0);
-    vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz+1-minz),(def_field_temp.nz));
+    vx_start = (int)mymax((gradient.get(i,0,'p')-gradient.supp-minx),0);
+    vx_end = (int)mymin((gradient.get(i,0,'p')+gradient.supp+1-minx),(def_field_temp.nx));
+    vy_start = (int)mymax((gradient.get(i,1,'p')-gradient.supp-miny),0);
+    vy_end = (int)mymin((gradient.get(i,1,'p')+gradient.supp+1-miny),(def_field_temp.ny));
+    vz_start = (int)mymax((gradient.get(i,2,'p')-gradient.suppz-minz),0);
+    vz_end = (int)mymin((gradient.get(i,2,'p')+gradient.suppz+1-minz),(def_field_temp.nz));
     
     //find appropriate indexes for RBF
     bx_start = (int)(gradient.supp - ((gradient.get(i,0,'p')-minx) - vx_start));
@@ -1201,12 +1391,12 @@ data_type2 OPTIMIZATION::line_minimize(void){
     
     
     //find appropriate indexes for acessing
-    vx_start = (int)max((gradient.get(i,0,'p')-gradient.supp),0);
-    vx_end = (int)min((gradient.get(i,0,'p')+gradient.supp+1),(source.nx));
-    vy_start = (int)max((gradient.get(i,1,'p')-gradient.supp),0);
-    vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp+1),(source.ny));
-    vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz),0);
-    vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz+1),(source.nz));
+    vx_start = (int)mymax((gradient.get(i,0,'p')-gradient.supp),0);
+    vx_end = (int)mymin((gradient.get(i,0,'p')+gradient.supp+1),(source.nx));
+    vy_start = (int)mymax((gradient.get(i,1,'p')-gradient.supp),0);
+    vy_end = (int)mymin((gradient.get(i,1,'p')+gradient.supp+1),(source.ny));
+    vz_start = (int)mymax((gradient.get(i,2,'p')-gradient.suppz),0);
+    vz_end = (int)mymin((gradient.get(i,2,'p')+gradient.suppz+1),(source.nz));
     
     //find appropriate indexes for RBF
     bx_start = (int)(gradient.supp - (gradient.get(i,0,'p') - vx_start));
@@ -1478,12 +1668,12 @@ void OPTIMIZATION::def_field_update(void){
   int ii,jj,kk;
   int vx_start,vx_end,vy_start,vy_end,vz_start,vz_end;
   int bx_start,bx_end,by_start,by_end,bz_start,bz_end;
-  
+
   int bx, by, bz;
   data_type new_valx, new_valy, new_valz;
-  
+
   //printf("Updating deformation field ... \n");
-  
+
   int vxmin,vxmax,vymin,vymax,vzmin,vzmax;
   vxmin = source.nx-1;
   vxmax = 0;
@@ -1491,33 +1681,33 @@ void OPTIMIZATION::def_field_update(void){
   vymax = 0;
   vzmin = source.nz-1;
   vzmax = 0;
-  
+
   //loop through each point in instance gradient
   for (i=0;i<gradient.num_points;i++){
-    
+
     //find appropriate indexes for acessing
-    vx_start = (int)max((gradient.get(i,0,'p')-gradient.supp),0);
-    vx_end = (int)min((gradient.get(i,0,'p')+gradient.supp+1),(source.nx));
-    vy_start = (int)max((gradient.get(i,1,'p')-gradient.supp),0);
-    vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp+1),(source.ny));
-    vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz),0);
-    vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz+1),(source.nz));
-    
+    vx_start = (int)mymax((gradient.get(i,0,'p')-gradient.supp),0);
+    vx_end = (int)mymin((gradient.get(i,0,'p')+gradient.supp+1),(source.nx));
+    vy_start = (int)mymax((gradient.get(i,1,'p')-gradient.supp),0);
+    vy_end = (int)mymin((gradient.get(i,1,'p')+gradient.supp+1),(source.ny));
+    vz_start = (int)mymax((gradient.get(i,2,'p')-gradient.suppz),0);
+    vz_end = (int)mymin((gradient.get(i,2,'p')+gradient.suppz+1),(source.nz));
+
     if(vx_start<vxmin)
       vxmin = vx_start;
     if(vx_end>vxmax)
       vxmax = vx_end;
-    
+
     if(vy_start<vymin)
       vymin = vy_start;
     if(vy_end>vymax)
       vymax = vy_end;
-    
+
     if(vz_start<vzmin)
       vzmin = vz_start;
     if(vz_end>vzmax)
       vzmax = vz_end;
-    
+
     //find appropriate indexes for RBF
     bx_start = (int)(gradient.supp - (gradient.get(i,0,'p') - vx_start));
     bx_end = (int)(gradient.supp + (vx_end - gradient.get(i,0,'p')));
@@ -1525,27 +1715,107 @@ void OPTIMIZATION::def_field_update(void){
     by_end = (int)(gradient.supp + (vy_end - gradient.get(i,1,'p')));
     bz_start = (int)(gradient.supp - (gradient.get(i,2,'p') - vz_start));
     bz_end = (int)(gradient.supp + (vz_end - gradient.get(i,2,'p')));
-    
-    
+
+
     for(ii=vx_start,bx=bx_start;ii<vx_end,bx<bx_end;ii++,bx++){
       for(jj=vy_start,by=by_start;jj<vy_end,by<by_end;jj++,by++){
-	for(kk=vz_start,bz=bz_start;kk<vz_end,bz<bz_end;kk++,bz++){
-	  
-	  new_valx = def_field.get(ii,jj,kk,'x') + gradient.get(i,0,'c')*RBF.get(bx,by,bz);
-	  new_valy = def_field.get(ii,jj,kk,'y') + gradient.get(i,1,'c')*RBF.get(bx,by,bz);
-	  new_valz = def_field.get(ii,jj,kk,'z') + gradient.get(i,2,'c')*RBF.get(bx,by,bz);
-	  
-	  def_field.set(ii,jj,kk,'x',new_valx);
-	  def_field.set(ii,jj,kk,'y',new_valy);
-	  def_field.set(ii,jj,kk,'z',new_valz);
-	  
-	}
+    for(kk=vz_start,bz=bz_start;kk<vz_end,bz<bz_end;kk++,bz++){
+
+      new_valx = def_field.get(ii,jj,kk,'x') + gradient.get(i,0,'c')*RBF.get(bx,by,bz);
+      new_valy = def_field.get(ii,jj,kk,'y') + gradient.get(i,1,'c')*RBF.get(bx,by,bz);
+      new_valz = def_field.get(ii,jj,kk,'z') + gradient.get(i,2,'c')*RBF.get(bx,by,bz);
+
+      def_field.set(ii,jj,kk,'x',new_valx);
+      def_field.set(ii,jj,kk,'y',new_valy);
+      def_field.set(ii,jj,kk,'z',new_valz);
+
+    }
       }
     }
-    
-    
+
+
   }
-  
+
+  //printf(" Zone %d,%d %d,%d %d,%d \n", vxmin,vxmax,vymin,vymax,vzmin,vzmax);
+
+}
+
+
+
+void OPTIMIZATION::def_field_update2(gradient_class *p){
+
+  int i;
+  int ii,jj,kk;
+  int vx_start,vx_end,vy_start,vy_end,vz_start,vz_end;
+  int bx_start,bx_end,by_start,by_end,bz_start,bz_end;
+
+  int bx, by, bz;
+  data_type new_valx, new_valy, new_valz;
+
+  //printf("Updating deformation field ... \n");
+
+  int vxmin,vxmax,vymin,vymax,vzmin,vzmax;
+  vxmin = source.nx-1;
+  vxmax = 0;
+  vymin = source.ny-1;
+  vymax = 0;
+  vzmin = source.nz-1;
+  vzmax = 0;
+
+  //loop through each point in instance gradient
+  for (i=0;i<p->num_points;i++){
+
+    //find appropriate indexes for acessing
+    vx_start = (int)mymax((p->get(i,0,'p')-p->supp),0);
+    vx_end = (int)mymin((p->get(i,0,'p')+p->supp+1),(source.nx));
+    vy_start = (int)mymax((p->get(i,1,'p')-p->supp),0);
+    vy_end = (int)mymin((p->get(i,1,'p')+p->supp+1),(source.ny));
+    vz_start = (int)mymax((p->get(i,2,'p')-p->suppz),0);
+    vz_end = (int)mymin((p->get(i,2,'p')+p->suppz+1),(source.nz));
+
+    if(vx_start<vxmin)
+      vxmin = vx_start;
+    if(vx_end>vxmax)
+      vxmax = vx_end;
+
+    if(vy_start<vymin)
+      vymin = vy_start;
+    if(vy_end>vymax)
+      vymax = vy_end;
+
+    if(vz_start<vzmin)
+      vzmin = vz_start;
+    if(vz_end>vzmax)
+      vzmax = vz_end;
+
+    //find appropriate indexes for RBF
+    bx_start = (int)(p->supp - (p->get(i,0,'p') - vx_start));
+    bx_end = (int)(p->supp + (vx_end - p->get(i,0,'p')));
+    by_start = (int)(p->supp - (p->get(i,1,'p') - vy_start));
+    by_end = (int)(p->supp + (vy_end - p->get(i,1,'p')));
+    bz_start = (int)(p->supp - (p->get(i,2,'p') - vz_start));
+    bz_end = (int)(p->supp + (vz_end - p->get(i,2,'p')));
+
+
+    for(ii=vx_start,bx=bx_start;ii<vx_end,bx<bx_end;ii++,bx++){
+      for(jj=vy_start,by=by_start;jj<vy_end,by<by_end;jj++,by++){
+    for(kk=vz_start,bz=bz_start;kk<vz_end,bz<bz_end;kk++,bz++){
+
+      new_valx = def_field.get(ii,jj,kk,'x') + p->get(i,0,'c')*RBF.get(bx,by,bz);
+      new_valy = def_field.get(ii,jj,kk,'y') + p->get(i,1,'c')*RBF.get(bx,by,bz);
+      new_valz = def_field.get(ii,jj,kk,'z') + p->get(i,2,'c')*RBF.get(bx,by,bz);
+
+      def_field.set(ii,jj,kk,'x',new_valx);
+      def_field.set(ii,jj,kk,'y',new_valy);
+      def_field.set(ii,jj,kk,'z',new_valz);
+
+    }
+      }
+    }
+
+
+  }
+
   //printf(" Zone %d,%d %d,%d %d,%d \n", vxmin,vxmax,vymin,vymax,vzmin,vzmax);
 
 }
@@ -1613,12 +1883,12 @@ void OPTIMIZATION::grd(void){
     //for that build one first
     
     //find appropriate indexes for acessing
-    vx_start = (int)max((gradient.get(i,0,'p')-gradient.supp),0);
-    vx_end = (int)min((gradient.get(i,0,'p')+gradient.supp),(source.nx));
-    vy_start = (int)max((gradient.get(i,1,'p')-gradient.supp),0);
-    vy_end = (int)min((gradient.get(i,1,'p')+gradient.supp),(source.ny));
-    vz_start = (int)max((gradient.get(i,2,'p')-gradient.suppz),0);
-    vz_end = (int)min((gradient.get(i,2,'p')+gradient.suppz),(source.nz));
+    vx_start = (int)mymax((gradient.get(i,0,'p')-gradient.supp),0);
+    vx_end = (int)mymin((gradient.get(i,0,'p')+gradient.supp),(source.nx));
+    vy_start = (int)mymax((gradient.get(i,1,'p')-gradient.supp),0);
+    vy_end = (int)mymin((gradient.get(i,1,'p')+gradient.supp),(source.ny));
+    vz_start = (int)mymax((gradient.get(i,2,'p')-gradient.suppz),0);
+    vz_end = (int)mymin((gradient.get(i,2,'p')+gradient.suppz),(source.nz));
     
     //find appropriate indexes for RBF
     bx_start = (int)(gradient.supp - (gradient.get(i,0,'p') - vx_start));

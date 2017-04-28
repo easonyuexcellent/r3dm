@@ -18,7 +18,8 @@ SOURCES += main.cpp \
     OPTIMIZATION.cpp \
     register3d.cpp \
     splcoord.cpp \
-    volume.cpp
+    volume.cpp \
+    multithread_hot_spots.cpp
 
 DISTFILES += \
     r3dmulti.pro.user
@@ -32,4 +33,6 @@ HEADERS += \
     OPTIMIZATION.h \
     register3d.h \
     splcoord.h \
-    volume.h
+    volume.h \
+    head.h \
+    multithread_hot_spots.h
