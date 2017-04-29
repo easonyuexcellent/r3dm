@@ -16,7 +16,7 @@ void sampling_coord::init(int x, int y, int z){
 
   //WARNING: calls build_identity automatically
   long ntot;
-  int i,j,k;
+  int i,j;//,k;
 
   ny= y;
   nx= x;

@@ -237,7 +237,7 @@ void basis_function::write(void){
 	}else{
 		for (i=0;i<ntot;i++){
 		  //temp = m[i];
-		  // fwrite(&temp,sizeof(data_type),1,fp);
+		  fwrite(&temp,sizeof(data_type),1,fp);
 		}
 		fclose(fp);
 	

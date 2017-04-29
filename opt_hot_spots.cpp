@@ -1,6 +1,6 @@
-#include "multithread_hot_spots.h"
+#include "opt_hot_spots.h"
 
-void multithread_hot_spots::init(hot_spots * _htspts, matrix_2d * _JH,volume * _source, volume * _target,sampling_coord * _def_field,basis_function * _RBF,input_vol_type _mmax, input_vol_type _mmin,int _nbins_src,int _nbins_trg)
+void opt_hot_spots::init(hot_spots * _htspts, matrix_2d * _JH,volume * _source, volume * _target,sampling_coord * _def_field,basis_function * _RBF,input_vol_type _mmax, input_vol_type _mmin,int _nbins_src,int _nbins_trg)
 {
     htspts=_htspts;
     JH=_JH;
@@ -14,10 +14,12 @@ void multithread_hot_spots::init(hot_spots * _htspts, matrix_2d * _JH,volume * _
     nbins_trg=_nbins_trg;
 }
 
-void multithread_hot_spots::run(){
+void opt_hot_spots::run(){
     runflag=1;
 
     data_type2 last_min,curr_min,diff;
+
+	last_min = JH->mi(); 
     int STOP=0;
     while(STOP==0){
 
@@ -43,7 +45,7 @@ void multithread_hot_spots::run(){
     }
 }
 
-data_type2 multithread_hot_spots::line_minimize(){
+data_type2 opt_hot_spots::line_minimize(){
 
     int i;
     int ii,jj,kk;
@@ -366,7 +368,7 @@ data_type2 multithread_hot_spots::line_minimize(){
     return mi_result;
 }
 
-void multithread_hot_spots::JH_inst_up(matrix_2d &JH_temp,
+void opt_hot_spots::JH_inst_up(matrix_2d &JH_temp,
         sampling_coord &def_field_temp, int minx, int maxx, int miny, int maxy,
         int minz, int maxz){
 
@@ -499,7 +501,7 @@ void multithread_hot_spots::JH_inst_up(matrix_2d &JH_temp,
 
 }
 
-data_type2 multithread_hot_spots::f_eval(data_type konst, matrix_2d &JH_temp, matrix_2d &JH_temp_copy,
+data_type2 opt_hot_spots::f_eval(data_type konst, matrix_2d &JH_temp, matrix_2d &JH_temp_copy,
         sampling_coord &def_field_temp, int minx, int maxx, int miny, int maxy,
         int minz, int maxz){
 
@@ -659,7 +661,7 @@ data_type2 multithread_hot_spots::f_eval(data_type konst, matrix_2d &JH_temp, ma
   return JH_temp_copy.mi();
 }
 
-void multithread_hot_spots::grd(void){
+void opt_hot_spots::grd(void){
 
   data_type STEP = gradient.supp*grd_STEP/8.0; //this is the h in (f(x+h)-f(x-h))/(2*h)
   data_type mic;

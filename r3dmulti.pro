@@ -19,7 +19,9 @@ SOURCES += main.cpp \
     register3d.cpp \
     splcoord.cpp \
     volume.cpp \
-    multithread_hot_spots.cpp
+    opt_hot_spots.cpp \
+    called_grd_max.cpp \
+    called_grd_diff.cpp
 
 DISTFILES += \
     r3dmulti.pro.user
@@ -35,4 +37,6 @@ HEADERS += \
     splcoord.h \
     volume.h \
     head.h \
-    multithread_hot_spots.h
+    opt_hot_spots.h \
+    called_grd_max.h \
+    called_grd_diff.h

@@ -34,7 +34,7 @@ void matrix_2d::init(int x, int y)
   tmp_src_hist = (JHtype *)malloc(nx*sizeof(JHtype));
   tmp_trg_hist = (JHtype *)malloc(ny*sizeof(JHtype));
   
-  nl2 = (data_type)log(2);
+  nl2 = (data_type)log(double(2));
   if ((m==NULL)||(tmp_src_hist==NULL)||(tmp_src_hist==NULL)){
     exit(1);
   }else{

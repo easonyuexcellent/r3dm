@@ -6,7 +6,7 @@ Gustavo Rohde
 
 #ifndef __REGISTER_3D_H__
 #define __REGISTER_3D_H__
-#include <head.h>
+#include "head.h"
 #include <QThread>
 #include <QMetaType>
 #include <QString>

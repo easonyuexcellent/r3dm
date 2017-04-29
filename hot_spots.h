@@ -27,6 +27,8 @@ class hot_spots {
   
   //based on konst threshold alone
   void prune1(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target);
+
+  void prune12(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target);
   
   //destructor
   void destroy(void);
@@ -41,9 +43,15 @@ class hot_spots {
   
   //find maximum value
   void find_max(gradient_class &grd,int *index, data_type *max);
+
+
+  void find_max_multi(gradient_class &grd,int *index, data_type *max);
   
   //check to see if point is already included (or close to) in one of the points in hp
   int check_distance(gradient_class &grd, int index);
+
+
+  int check_distance_multi(gradient_class &grd, int index);
   
   
 

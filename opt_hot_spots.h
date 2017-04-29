@@ -1,7 +1,7 @@
 #ifndef MULTITHREAD_HOT_SPOTS_H
 #define MULTITHREAD_HOT_SPOTS_H
 
-#include <head.h>
+#include "head.h"
 #include "register3d.h"
 #include "volume.h"
 #include "splcoord.h"
@@ -11,18 +11,16 @@
 #include "config_class.h"
 #include <stdlib.h>
 #include <time.h>
-#include "multithread_hot_spots.h"
 #include "hot_spots.h"
 #include <stdio.h>
 #include <string.h>
-#include <QMetaType>
 #include <QThread>
 
-class multithread_hot_spots : public QThread
+class opt_hot_spots : public QThread
 {
 public:
     //functions
-    multithread_hot_spots(){endflag=0;runflag=0;}
+    opt_hot_spots(){endflag=0;runflag=0;}
     void init(hot_spots *, matrix_2d *,volume *, volume *,sampling_coord *,basis_function *,input_vol_type,input_vol_type,int,int );
     void grd(void);
     void run();

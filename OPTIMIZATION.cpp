@@ -32,7 +32,7 @@
 #include <time.h>
 #include <string.h>
 
-#include "multithread_hot_spots.h"
+#include "opt_hot_spots.h"
 
 
 
@@ -134,7 +134,9 @@ void OPTIMIZATION::init(config_class &cfg){
   printf("Number of histogram bins in Source image: %d \n", cfg.nbins_src);
   printf("Number of histogram bins in Target image: %d \n", cfg.nbins_trg);
   
-  if (cfg.OP_MODE==1)
+  if (cfg.OP_MODE==2)
+    printf("Using multi Adaptive Grid Algorithm.\n");
+  else if (cfg.OP_MODE==1)
     printf("Using Adaptive Grid Algorithm.\n");
   else 
     printf("Using Regular Grid Approach.\n");
@@ -536,7 +538,7 @@ void OPTIMIZATION::run_multi(){
 
     //now identify "hot spots"
     data_type2 konst = pick_const;
-    htspts.prune1(gradient, konst, num_rbf_init, source, target);
+    htspts.prune12(gradient, konst, num_rbf_init, source, target);
     printf("     Number of hot spots is %d \n", htspts.num_hp);
 
     gradient.destroy();
@@ -549,10 +551,10 @@ void OPTIMIZATION::run_multi(){
     //multi_processing "hot spots"
     int j=0;
     if (htspts.num_hp>0){
-        multithread_hot_spots **p;
-        p =(multithread_hot_spots **)malloc(htspts.num_hp*sizeof(multithread_hot_spots *));
+        opt_hot_spots **p;
+        p =(opt_hot_spots **)malloc(htspts.num_hp*sizeof(opt_hot_spots *));
         for (j=0;j<htspts.num_hp;j++){
-            p[j]=new multithread_hot_spots;
+            p[j]=new opt_hot_spots;
             p[j]->init( &htspts,&JH,&source,&target,&def_field,&RBF,mmax,mmin,nbins_src,nbins_trg);
             p[j]->grd_STEP=grd_STEP;
             p[j]->br_STEP=br_STEP;
@@ -565,7 +567,14 @@ void OPTIMIZATION::run_multi(){
             p[j]->start();
         }
 
+
         //wait for "hot spots"
+        for (j=0;j<htspts.num_hp;j++){
+            p[j]->wait();
+        }
+
+        //wait for "hot spots"
+        /*
         while (1){
             int countr = 0;
             int counte = 0;
@@ -576,7 +585,7 @@ void OPTIMIZATION::run_multi(){
             if (countr==0&&counte+1>=htspts.num_hp){
                 break;
             }
-        }
+        }*/
 
         //update def_field
         for (j=0;j<htspts.num_hp;j++){
