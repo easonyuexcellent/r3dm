@@ -28,7 +28,9 @@ class hot_spots {
   //based on konst threshold alone
   void prune1(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target);
 
-  void prune12(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target);
+  void prune2(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target);
+
+  void prune3(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target);
   
   //destructor
   void destroy(void);

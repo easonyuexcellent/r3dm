@@ -15,6 +15,9 @@
 #include <stdlib.h>
 #include "called_grd_max.h"
 #include "called_grd_diff.h"
+#include <vector>
+#include <algorithm>
+#include <node.h>
 
 /**
  *
@@ -102,7 +105,7 @@ void hot_spots::prune1(gradient_class &gradient, data_type konst, int num_init, 
 
 
 
-void hot_spots::prune12(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target){
+void hot_spots::prune2(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target){
 
   int i;
   int index;
@@ -138,7 +141,7 @@ void hot_spots::prune12(gradient_class &gradient, data_type konst, int num_init,
   while (coeff_mag>0){
 
     //find maximum magnitude of coefficients in gradient class
-	find_max_multi(gradient,&index,&coeff_mag);
+    find_max_multi(gradient,&index,&coeff_mag);
     //if (gradient.num_points>switch_number){
     //  find_max_multi(gradient,&index,&coeff_mag);
     //}else{
@@ -148,32 +151,32 @@ void hot_spots::prune12(gradient_class &gradient, data_type konst, int num_init,
     //	printf("inside prune, mag is %f, and index is %d \n", coeff_mag, index);
     //	printf("that is right \n");
 
-	if ((coeff_mag>=konst)&&(source.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*source.cut_trsh)&&(target.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*target.cut_trsh)){
-		//if (coeff_mag>=konst){
-		//check to see if it doesn't neighbor any other already in hp
-		if (check_distance_multi(gradient,index)==0) {
-			//add point to hp
-			set(num_hp,0,(int)gradient.get(index,0,'p'));
-			set(num_hp,1,(int)gradient.get(index,1,'p'));
-			set(num_hp,2,(int)gradient.get(index,2,'p'));
-			
-			num_hp++;
+    if ((coeff_mag>=konst)&&(source.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*source.cut_trsh)&&(target.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*target.cut_trsh)){
+        //if (coeff_mag>=konst){
+        //check to see if it doesn't neighbor any other already in hp
+        if (check_distance_multi(gradient,index)==0) {
+            //add point to hp
+            set(num_hp,0,(int)gradient.get(index,0,'p'));
+            set(num_hp,1,(int)gradient.get(index,1,'p'));
+            set(num_hp,2,(int)gradient.get(index,2,'p'));
 
-		}
+            num_hp++;
 
-		//set to zero
-		gradient.set(index,0,0,'c');
-		gradient.set(index,1,0,'c');
-		gradient.set(index,2,0,'c');
-		
-		
+        }
 
-	} else {
-		//set all to zero
-		gradient.set(index,0,0,'c');
-		gradient.set(index,1,0,'c');
-		gradient.set(index,2,0,'c');
-	}
+        //set to zero
+        gradient.set(index,0,0,'c');
+        gradient.set(index,1,0,'c');
+        gradient.set(index,2,0,'c');
+
+
+
+    } else {
+        //set all to zero
+        gradient.set(index,0,0,'c');
+        gradient.set(index,1,0,'c');
+        gradient.set(index,2,0,'c');
+    }
 /*
     if (gradient.num_points>switch_number){
         if ((coeff_mag>=konst)&&(source.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*source.cut_trsh)&&(target.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*target.cut_trsh)){
@@ -239,6 +242,75 @@ void hot_spots::prune12(gradient_class &gradient, data_type konst, int num_init,
   // printf("      %d, %d, %d \n", (int)get(i,0), (int)get(i,1), (int)get(i,2) );
   //}
   //printf("\n");
+
+}
+
+
+
+void hot_spots::prune3(gradient_class &gradient, data_type konst, int num_init, volume &source, volume &target){
+
+  int i;
+  int index;
+  int hp_in=0;
+  data_type coeff_mag;
+  //int res;
+
+  num_hp = 0;
+
+  //    res = (int)pow(2,resol);
+
+  //allocate memory to hold the hot spots (NOTE: the right way to do this would be with lists)
+  if (num_init<1){
+    hp = (int *)malloc(gradient.num_points*3*sizeof(int));
+  } else {
+    hp = (int *)realloc(hp,gradient.num_points*3*sizeof(int));
+  }
+  find_max_multi(gradient,&index,&coeff_mag);
+  //	printf("inside prune, mag is %f, and index is %d \n", coeff_mag, index);
+  //	printf("that is right 2\n");
+  //initialize to zero
+  for (long ii=0;ii<gradient.num_points*3;ii++)
+    hp[ii]=0;
+
+  //go through each point and compare it to konst
+  coeff_mag = data_type(1.05432);
+
+  data_type cx,cy,cz,val;
+
+  std::vector <node> list;
+
+  for (index=0;index<gradient.num_points;index++){
+      cx = gradient.get(index,0,'c');
+      cy = gradient.get(index,1,'c');
+      cz = gradient.get(index,2,'c');
+      val = (data_type)sqrt(cx*cx + cy*cy + cz*cz);
+      node Node(index,val);
+      list.push_back(Node);
+  }
+  sort(list.begin(),list.end());
+  for (index=0;index<gradient.num_points;index++){
+      if (list[index].val<konst){
+          //set all to zero
+          gradient.set(index,0,0,'c');
+          gradient.set(index,1,0,'c');
+          gradient.set(index,2,0,'c');
+          continue;
+      }
+      if ((source.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*source.cut_trsh)&&(target.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*target.cut_trsh)){
+          if (check_distance_multi(gradient,index)==0) {
+              //add point to hp
+              set(num_hp,0,(int)gradient.get(index,0,'p'));
+              set(num_hp,1,(int)gradient.get(index,1,'p'));
+              set(num_hp,2,(int)gradient.get(index,2,'p'));
+              num_hp++;
+          }
+          //set to zero
+          gradient.set(index,0,0,'c');
+          gradient.set(index,1,0,'c');
+          gradient.set(index,2,0,'c');
+          continue;
+      }
+  }
 
 }
 

@@ -538,7 +538,7 @@ void OPTIMIZATION::run_multi(){
 
     //now identify "hot spots"
     data_type2 konst = pick_const;
-    htspts.prune12(gradient, konst, num_rbf_init, source, target);
+    htspts.prune2(gradient, konst, num_rbf_init, source, target);
     printf("     Number of hot spots is %d \n", htspts.num_hp);
 
     gradient.destroy();
