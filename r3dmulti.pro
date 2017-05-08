@@ -23,7 +23,8 @@ SOURCES += main.cpp \
     called_grd_max.cpp \
     called_grd_diff.cpp \
     node.cpp \
-    called_grd_build.cpp
+    called_grd_build.cpp \
+    called_crd_upsp.cpp
 
 DISTFILES += \
     r3dmulti.pro.user
@@ -43,4 +44,5 @@ HEADERS += \
     called_grd_max.h \
     called_grd_diff.h \
     node.h \
-    called_grd_build.h
+    called_grd_build.h \
+    called_crd_upsp.h

@@ -33,6 +33,7 @@ private:
   
   //upsampling
   void upsample(void);
+  void upsample_multi(void);
   data_type get_interp_o(data_type, data_type, data_type, char);
   data_type get_o(int, int, int, char);
   

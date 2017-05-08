@@ -589,6 +589,8 @@ void OPTIMIZATION::run_multi(){
                 p[j]->s_trsh=s_trsh;
                 p[j]->gradient.init2(htspts.get(j,0),htspts.get(j,1),htspts.get(j,2),tx,ty,tz,support,supportz,source.nx,source.ny,source.nz);
                 p[j]->start();
+                //if ((j+1)%core_number==0)
+                //    p[j]->wait();
             }
             for (j=0;j<htspts.num_hp;j++){
                 p[j]->wait();
@@ -632,7 +634,7 @@ void OPTIMIZATION::run_multi(){
             target.build_resolution(curr_resolution);
 
 
-            def_field.upsample();
+            def_field.upsample_multi();
 
             bbox.lx = bbox.lx*2;
             bbox.rx = bbox.rx*2;
@@ -669,7 +671,7 @@ void OPTIMIZATION::run_multi(){
         target.build_resolution(0);
 
         for (i=0;i<curr_resolution;i++){
-            def_field.upsample();
+            def_field.upsample_multi();
         }
         JH_inst();
 

@@ -482,7 +482,7 @@ void volume::vol_write(void){
 	FILE *fp;
 	//input_vol_type temp;
 	input_vol_type * tmp;
-	tmp = (input_vol_type *)malloc(nxR * nyR * sizeof(input_vol_type));
+    tmp = (input_vol_type *)malloc(nx * ny * sizeof(input_vol_type));
 	int i,j,k;
 
 	if ((fp=fopen(filename,"wb"))==NULL) {
