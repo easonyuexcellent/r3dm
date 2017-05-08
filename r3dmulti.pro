@@ -22,7 +22,8 @@ SOURCES += main.cpp \
     opt_hot_spots.cpp \
     called_grd_max.cpp \
     called_grd_diff.cpp \
-    node.cpp
+    node.cpp \
+    called_grd_build.cpp
 
 DISTFILES += \
     r3dmulti.pro.user
@@ -41,4 +42,5 @@ HEADERS += \
     opt_hot_spots.h \
     called_grd_max.h \
     called_grd_diff.h \
-    node.h
+    node.h \
+    called_grd_build.h

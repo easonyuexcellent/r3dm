@@ -17,7 +17,7 @@
 #include "called_grd_diff.h"
 #include <vector>
 #include <algorithm>
-#include <node.h>
+#include "node.h"
 
 /**
  *
@@ -265,7 +265,7 @@ void hot_spots::prune3(gradient_class &gradient, data_type konst, int num_init, 
   } else {
     hp = (int *)realloc(hp,gradient.num_points*3*sizeof(int));
   }
-  find_max_multi(gradient,&index,&coeff_mag);
+
   //	printf("inside prune, mag is %f, and index is %d \n", coeff_mag, index);
   //	printf("that is right 2\n");
   //initialize to zero
@@ -288,8 +288,10 @@ void hot_spots::prune3(gradient_class &gradient, data_type konst, int num_init, 
       list.push_back(Node);
   }
   sort(list.begin(),list.end());
-  for (index=0;index<gradient.num_points;index++){
-      if (list[index].val<konst){
+  for (i=0;i<gradient.num_points;i++){
+      index=list[i].index;
+      val=list[i].val;
+      if (val<konst){
           //set all to zero
           gradient.set(index,0,0,'c');
           gradient.set(index,1,0,'c');
@@ -297,7 +299,7 @@ void hot_spots::prune3(gradient_class &gradient, data_type konst, int num_init, 
           continue;
       }
       if ((source.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*source.cut_trsh)&&(target.get(gradient.get(index,0,'p'),gradient.get(index,1,'p'),gradient.get(index,2,'p'))>0.5*target.cut_trsh)){
-          if (check_distance_multi(gradient,index)==0) {
+          if (check_distance(gradient,index)==0) {
               //add point to hp
               set(num_hp,0,(int)gradient.get(index,0,'p'));
               set(num_hp,1,(int)gradient.get(index,1,'p'));

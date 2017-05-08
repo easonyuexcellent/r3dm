@@ -4,20 +4,22 @@ Uses matrix3d.cpp
 Gustavo Rohde
 */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <iostream>
 #include "register3d.h"
 #include "volume.h"
-
+#include "head.h"
+#include <iostream>
 
 /*
  *allocates memory
  */
 void volume::init(int x, int y,int z, int hs, char *flname){
 
-  int i,j;//,k;
+  int i,j,k;
 
   /*ny= y;
   nx= x;
@@ -93,7 +95,7 @@ void volume::init2(int resol, int x, int y, int z, int x1, int x2, int y1, int y
   data_type csts, cstt;
   int res;
 
-  res = (int)pow(float(2),resol);
+  res = (int)pow(double(2),resol);
 
   nyR= y/2;
   nxR= x/2;
@@ -236,9 +238,9 @@ void volume::dilate(void){
 	m[i][j][k]=0;
 	if(Rm[i][j][k]>0){
 	 
-      for(kk=mymax(0,k-2);kk<mymin(nzR-1,k+2);kk++){
-        for(jj=mymax(0,j-2);jj<mymin(nyR-1,j+2);jj++){
-          for(ii=mymax(0,i-2);ii<mymin(nxR-1,i+2);ii++){
+	  for(kk=mymax(0,k-2);kk<mymin(nzR-1,k+2);kk++){
+	    for(jj=mymax(0,j-2);jj<mymin(nyR-1,j+2);jj++){
+	      for(ii=mymax(0,i-2);ii<mymin(nxR-1,i+2);ii++){
 		m[ii][jj][kk]=1;
 	      }
 	    }
@@ -295,7 +297,7 @@ void volume::build_resolution(int n){
 
   //printf("Subsampling volume.\n");
 
-  jmp = pow(float(2),n);
+  jmp = pow(double(2),n);
 
   nx = (int) (((data_type)nxR)/((data_type)jmp));
   ny = (int) (((data_type)nyR)/((data_type)jmp));
@@ -436,8 +438,9 @@ data_type volume::get_intrpl(float x,float y,float z){
 int volume::vol_read(void){
 
   FILE *fp;
-  input_vol_type *temp;
-  temp=(input_vol_type *)malloc(nxR*sizeof(input_vol_type));
+  //input_vol_type temp;
+  input_vol_type * tmp;
+  tmp = (input_vol_type *)malloc(nxR * nyR * sizeof(input_vol_type));
   int i,j,k;
   char buff;
   
@@ -450,17 +453,20 @@ int volume::vol_read(void){
     for(i=0;i<header_size;i++){
       fread(&buff,sizeof(char),1,fp);
     }
-      
+
 
     for (k=0;k<nzR;k++){
+	  fread(tmp, sizeof(input_vol_type),nxR*nyR,fp);
       for (j=0;j<nyR;j++){
-		  fread(temp,sizeof(input_vol_type),nxR,fp);
-	for (i=0;i<nxR;i++){
-	  set_Rm(i,j,k,temp[i]);
-	  //	printf("inside read ok\n");
-	}
+		for (i=0;i<nxR;i++){
+		  //m[i]=(input_vol_type)temp;
+		  //	printf("inside read test\n");
+		  set_Rm(i,j,k,tmp[i+j*nxR]);
+		  //	printf("inside read ok\n");
+		}
       }
     }
+	free(tmp);
     //printf("Input file read.\n");
     fclose(fp);
     return 1;
@@ -474,17 +480,16 @@ int volume::vol_read(void){
 void volume::vol_write(void){
 
 	FILE *fp;
-	input_vol_type *temp;
-	temp=(input_vol_type *)malloc(nxR*sizeof(input_vol_type));
+	//input_vol_type temp;
+	input_vol_type * tmp;
+	tmp = (input_vol_type *)malloc(nxR * nyR * sizeof(input_vol_type));
 	int i,j,k;
 
 	if ((fp=fopen(filename,"wb"))==NULL) {
 		printf("Could not open output file.\n");
-		free (temp);
 		exit(1);
 	}else{
 	  
-
 	  //	for (i=0;i<ntot;i++){
 	  //  temp = (input_vol_type)m[i];
 	  //  fwrite(&temp,sizeof(input_vol_type),1,fp);
@@ -498,14 +503,15 @@ void volume::vol_write(void){
 	    // printf("%d ",k);
 	    for (j=0;j<ny;j++){
 	      for (i=0;i<nx;i++){
-			  temp[i] = get(i,j,k);
-			  //m[i]=(input_vol_type)temp;
+            tmp[i+j*nx] = get(i,j,k);
 	      }
-		fwrite(temp,sizeof(input_vol_type),nxR,fp);
 	    }
+      fwrite(tmp,sizeof(input_vol_type),nx*ny,fp);
 	  }
-
+	  free(tmp);
 	  printf("File written.\n");
+
+
 		fclose(fp);
 	
 	}
@@ -522,7 +528,7 @@ void volume::compt_bbox(void){
 
 	int x,y,z;
 	
-	data_type trsh = data_type(0.15); //in terms of the max of the volume
+	data_type trsh = 0.15; //in terms of the max of the volume
 	input_vol_type ma; //max of volume
 	data_type cst;
 

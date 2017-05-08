@@ -96,6 +96,7 @@ class OPTIMIZATION {
      functions
    */
   void grd(void); //given that the gradient has been initialized, computes the gradient
+  void grd_multi(void);
 
   /**Method that updates the Joint Histogram Structure
    */
