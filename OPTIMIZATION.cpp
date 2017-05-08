@@ -480,8 +480,8 @@ void OPTIMIZATION::run_multi(){
 
     printf("Registration has started.\n");
     time(&time_now);
-    time_t time_last=time_now;
     printf("Time: %ld\n",(time_now-time_init));
+    time_t time_last=time_now;
 
     //loop on all levels of algorithm
     for(i=0;i<num_levels;i++){
@@ -502,15 +502,15 @@ void OPTIMIZATION::run_multi(){
 
         grd_multi();
 
-        time_last=time_now;
         time(&time_now);
         printf("Time %ld cost in grd_multi...\n",(time_now-time_last));
+        time_last=time_now;
 
         line_minimize();
 
-        time_last=time_now;
         time(&time_now);
         printf("Time %ld cost in line_minimize...\n",(time_now-time_last));
+        time_last=time_now;
 
 
 
@@ -552,9 +552,9 @@ void OPTIMIZATION::run_multi(){
 
         JH_inst();
 
-        time_last=time_now;
         time(&time_now);
         printf("Time %ld cost in hold temporarity...\n",(time_now-time_last));
+        time_last=time_now;
 
         //now identify "hot spots"
         data_type2 konst = pick_const;
@@ -563,9 +563,9 @@ void OPTIMIZATION::run_multi(){
 
         gradient.destroy();
 
-        time_last=time_now;
         time(&time_now);
         printf("Time %ld cost in identify hotspots...\n",(time_now-time_last));
+        time_last=time_now;
 
         printf("Registration has started.\n");
         time(&time_now);
@@ -601,9 +601,9 @@ void OPTIMIZATION::run_multi(){
             }
         }
 
-        time_t time_last=time_now;
         time(&time_now);
         printf("Time %ld cost in processing hot spots...\n",(time_now-time_last));
+        time_last=time_now;
 
         //reset
         STOP=0;
@@ -616,9 +616,9 @@ void OPTIMIZATION::run_multi(){
 
         //sprintf(std_msg," The new test: res_array[curr_res_index] = %d, npoints_x = %d.", res_array[curr_res_index], npoints_x);
 
-        time_last=time_now;
         time(&time_now);
         printf("Time %ld cost in reset RBF...\n",(time_now-time_last));
+        time_last=time_now;
 
         //upsample resolution if necessary
         if ( (res_array[curr_res_index]<=npoints_x)&&(max_res_index>curr_res_index) ){
@@ -652,13 +652,10 @@ void OPTIMIZATION::run_multi(){
 
             curr_res_index++;
 
+            time(&time_now);
+            printf("Time %ld cost in upsample...\n",(time_now-time_last));
+            time_last=time_now;
         }
-
-        time_last=time_now;
-        time(&time_now);
-        printf("Time %ld cost in upsample...\n",(time_now-time_last));
-
-
         //end
     }
 
